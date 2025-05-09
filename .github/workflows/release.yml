@@ -1,0 +1,40 @@
+name: Build and Release you-get
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13'
+
+    - name: Extract version
+      id: get_version
+      run: |
+        VERSION=$(python -c "import re; content=open('src/you_get/version.py').read(); print(re.search(r\"__version__\\s*=\\s*'(.+?)'\", content).group(1))")
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Zip the you_get directory
+      run: |
+        cd src
+        zip -r you-get.zip you_get
+
+    - name: Create GitHub Release and Upload Asset
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.get_version.outputs.version }}
+        name: you-get ${{ steps.get_version.outputs.version }}
+        files: src/you-get.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
